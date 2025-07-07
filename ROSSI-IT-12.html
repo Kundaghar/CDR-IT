@@ -1,0 +1,889 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <title>🛡️ 🖥️ // Rossi - ITING - IT //🖥️ 🛡️</title> 
+ <!--INCLUSION DE LIBRERIAS-->
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+  <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css" />
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      display: flex;
+      height: 100vh;
+    }
+	td {
+      max-width: 200px;
+      word-break: break-word;
+      white-space: normal;
+    }
+    #sidebar {
+      width: 250px;
+      background-color: #343a40;
+      color: white;
+      padding: 20px;
+      box-sizing: border-box;
+    }
+
+    #sidebar h2 {
+      font-size: 18px;
+      margin-top: 0;
+      margin-bottom: 15px;
+    }
+
+    #sidebar button, #sidebar input[type="file"] {
+      width: 100%;
+      margin-bottom: 10px;
+      padding: 10px;
+      background-color: #495057;
+      color: white;
+      border: none;
+      cursor: pointer;
+      font-size: 14px;
+    }
+
+    #sidebar button:hover {
+      background-color: #6c757d;
+    }
+
+    #main {
+      flex-grow: 1;
+      padding: 20px;
+      overflow-y: auto;
+    }
+
+    table {
+      border-collapse: collapse;
+      width: 100%;
+      margin-top: 15px;
+    }
+
+    th, td {
+      border: 1px solid #ccc;
+      padding: 6px;
+      text-align: left;
+    }
+
+    .oculto {
+      display: none;
+    }
+	#sidebar.colapsado {
+  width: 60px;
+  padding: 10px;
+}
+
+#sidebar.colapsado h2 {
+  display: none;
+}
+
+#sidebar.colapsado button {
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: 16px;
+  padding: 8px;
+}
+
+#sidebar.colapsado button::after {
+  content: '';
+}
+
+#sidebar button i {
+  margin-right: 8px;
+}
+
+#main.expandido {
+  margin-left: 60px;
+}
+.table-wrapper {
+  overflow-x: auto;
+  max-width: 100%;
+}
+
+#toggleSidebar {
+  position: absolute;
+  top: 860px;
+  left: 9px;
+  z-index: 919;
+  background-color: #3daee9; /* Azul celeste */
+  color: white;
+  border: none;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%; /* Redondo perfecto */
+  cursor: pointer;
+  display: flex; /* Centrado del ícono */
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2); /* Sombra sutil */
+  transition: background-color 0.3s ease;
+}
+
+#toggleSidebar:hover {
+  background-color: #2b9cd8; /* Color más oscuro al pasar el mouse */
+	
+  </style>
+</head>
+<body>
+	<button id="toggleSidebar">
+	<i class="fa-solid fa-left-right"></i>
+	</button>
+	
+	
+    <div id="sidebar">
+  
+    <hr />
+    <h2> 🛡️ IT Datasheet 🖥️ ️</h2>
+
+    <!-- Carga de archivos -->
+	<button onclick="document.getElementById('fileInput').click()">📂 Cargar (CSV)</button>
+	<input type="file" id="fileInput" accept=".csv" style="display: none;" />
+    <button onclick="document.getElementById('dhcpFileInput').click()">📥 Cargar DHCP (XLS)</button>
+    <input type="file" id="dhcpFileInput" accept=".xls,.xlsx" class="oculto" onchange="leerDHCP(event)" />
+
+    <button onclick="alert('Función PDF Fortigate no implementada aún')">📥 Cargar (PDF)</button>
+
+    <hr />
+
+    <!-- Vistas disponibles -->
+    <button id="btnLista">🖥️ Vista Total (AV)</button>
+    <button id="btnGrafico">📈 Vista Circular (AV)</button>
+    <button id="btnSegmento">🌐 Segmentos de IP (AV)</button>
+    <button id="btnSede">🏢 Vista por Sede (AV)</button>
+
+    <hr />
+
+	<button onclick="mostrarDHCP()">🖧 Visualizar Info DHCP</button>
+    
+	<button onclick="compararDHCPconInventarioAvanzado()">🔍 Comparar DHCP x Inv</button>
+
+    <hr />
+
+    <button onclick="alert('Vista Seguridad no implementada')">🔐 Visualizar Seguridad FGT</button>
+
+    <hr />
+    
+    <!-- Funciones de MAC -->
+    <button onclick="document.getElementById('macFileInput').click()">💾 Convertir MAC</button>
+    <input type="file" id="macFileInput" accept=".txt" class="oculto" onchange="leerYConvertir(event)" />
+    <button onclick="mostrarMAC()">📋 Mostrar MAC Convertidas</button>
+	<button onclick="buscarMACenCSV()">🔍 Buscar MAC en Inventario</button>
+	<button onclick="compararMACconInventario()">🧪 Comparar MACs en Inventario</button>
+
+  </div>
+
+
+  <div id="main" class="table-wrapper">
+    <h1>Inventario Trend Micro</h1>
+    <p>Seleccione el archivo CSV de Trend Micro para visualizar el inventario.</p>
+
+    <div id="controls" style="display:none">
+
+    </div>
+
+    <div id="tabla-container"></div>
+    <div id="grafico-container">
+      <canvas id="graficoCircular" style="max-width: 600px; max-height: 600px"></canvas>
+      <div id="detalle-segmento" style="margin-top: 30px;"></div>
+    </div>
+    <div id="segmento-container"></div>
+    <div id="contenido"></div>
+  </div>
+
+  <!-- Scripts: dashboard + MAC fusionados -->
+  <script>
+    // ---------- MAC Tools ----------
+    let macConvertidas = [];
+
+    function transformarMAC(macRaw) {
+      const limpia = macRaw.replace(/-/g, '').trim();
+      if (limpia.length !== 12) return "INVALIDA";
+      return limpia.match(/.{2}/g).join(":");
+    }
+
+    function leerYConvertir(event) {
+      const archivo = event.target.files[0];
+      if (!archivo) return;
+
+      const lector = new FileReader();
+      lector.onload = function(e) {
+        const lineas = e.target.result.split(/\r?\n/);
+        macConvertidas = [];
+
+        for (const linea of lineas) {
+          const match = linea.match(/^([\da-fA-F]{4}-[\da-fA-F]{4}-[\da-fA-F]{4})\s+\d+\s+\w+\s+(GigabitEthernet[\d\/]+)/);
+          if (match) {
+            const macFormateada = transformarMAC(match[1]);
+            macConvertidas.push({
+              mac: macFormateada,
+              puerto: match[2]
+            });
+          }
+        }
+
+        alert(`✅ Se procesaron ${macConvertidas.length} MACs.`);
+      };
+
+      lector.readAsText(archivo);
+    }
+
+    function mostrarMAC() {
+      const contenedor = document.getElementById("contenido");
+      if (macConvertidas.length === 0) {
+        contenedor.innerHTML = "<p>❌ No hay MACs cargadas. Subí un archivo primero.</p>";
+        return;
+      }
+
+      let html = "<h2>MACs Convertidas</h2><table><thead><tr><th>#</th><th>MAC</th><th>Puerto</th></tr></thead><tbody>";
+      macConvertidas.forEach((item, i) => {
+        html += `<tr><td>${i + 1}</td><td>${item.mac}</td><td>${item.puerto}</td></tr>`;
+      });
+      html += "</tbody></table>";
+      contenedor.innerHTML = html;
+    }
+let datosFiltrados = [];
+let grafico = null;
+
+document.getElementById('fileInput').addEventListener('change', function(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        const text = e.target.result;
+        procesarCSV(text);
+    };
+    reader.readAsText(file);
+});
+function buscarMACenCSV() {
+  if (macConvertidas.length === 0) {
+    alert("❌ No hay MACs convertidas. Subí un archivo primero.");
+    return;
+  }
+
+  if (datosFiltrados.length === 0) {
+    alert("❌ No hay archivo CSV cargado. Subí el inventario primero.");
+    return;
+  }
+
+  const coincidencias = [];
+
+  macConvertidas.forEach(macObj => {
+    const macBuscada = macObj.mac.toUpperCase();
+    const match = datosFiltrados.find(d => d.mac.trim().toUpperCase() === macBuscada);
+    if (match) {
+      coincidencias.push({
+        mac: macBuscada,
+        puerto: macObj.puerto,
+        ip: match.ip,
+        nombre: match.nombre
+      });
+    }
+  });
+
+  const contenedor = document.getElementById("contenido");
+  let html = "<h2>🔍 Coincidencias de MAC en el Inventario</h2>";
+
+  if (coincidencias.length === 0) {
+    html += "<p>❌ No se encontraron coincidencias.</p>";
+  } else {
+    html += "<table><thead><tr><th>#</th><th>MAC</th><th>Puerto</th><th>IP</th><th>Nombre de Equipo</th></tr></thead><tbody>";
+    coincidencias.forEach((item, i) => {
+      html += `<tr>
+        <td>${i + 1}</td>
+        <td>${item.mac}</td>
+        <td>${item.puerto}</td>
+        <td>${item.ip}</td>
+        <td>${item.nombre}</td>
+      </tr>`;
+    });
+    html += "</tbody></table>";
+  }
+
+  contenedor.innerHTML = html;
+}
+
+function procesarCSV(csvText) {
+    const lines = csvText.split(/\r?\n/).map(line => line.split(','));
+
+    if (lines.length < 2) {
+        alert('El archivo no contiene datos válidos.');
+        return;
+    }
+
+    const headers = lines[0].map(h => h.trim().replace(/(^")|("$)/g, ''));
+    const idxNombre = headers.indexOf("Endpoint name");
+    const idxIP = headers.indexOf("IP address");
+    const idxMAC = headers.indexOf("MAC address");
+    const idxEstadoAV = headers.indexOf("Agent update status");
+    const idxUltimoUpdate = headers.indexOf("Sensor last connected");
+    const idxSensor = headers.indexOf("Sensor connectivity");
+
+    if (idxNombre === -1 || idxIP === -1 || idxMAC === -1 || idxEstadoAV === -1 || idxUltimoUpdate === -1 || idxSensor === -1) {
+        alert('El archivo CSV no contiene las columnas esperadas.');
+        return;
+    }
+
+    datosFiltrados = [];
+
+    for (let i = 1; i < lines.length; i++) {
+        const row = lines[i];
+        if (row.length < headers.length) continue;
+
+        datosFiltrados.push({
+            nombre: (row[idxNombre] || '').replace(/(^")|("$)/g, ''),
+            ip: (row[idxIP] || '').replace(/(^")|("$)/g, ''),
+            mac: (row[idxMAC] || '').replace(/(^")|("$)/g, ''),
+            estadoAV: (row[idxEstadoAV] || '').replace(/(^")|("$)/g, ''),
+            ultimoUpdate: (row[idxUltimoUpdate] || '').replace(/(^")|("$)/g, ''),
+            sensor: (row[idxSensor] || '').replace(/(^")|("$)/g, '')
+        });
+    }
+
+    document.getElementById('controls').style.display = 'block';
+    mostrarLista();
+}
+
+function mostrarLista() {
+    ocultarTodo();
+    let html = '<table id="tabla" class="display"><thead><tr>';
+    html += '<th>Nombre de Equipo</th><th>IP</th><th>MAC</th><th>Estado Antivirus</th><th>Último Update</th><th>Estado Sensores</th>';
+    html += '</tr></thead><tbody>';
+
+    datosFiltrados.forEach(d => {
+        html += '<tr>';
+        html += `<td>${d.nombre}</td><td>${d.ip}</td><td>${d.mac}</td><td>${d.estadoAV}</td><td>${d.ultimoUpdate}</td><td>${d.sensor}</td>`;
+        html += '</tr>';
+    });
+
+    html += '</tbody></table>';
+    document.getElementById('tabla-container').innerHTML = html;
+    $('#tabla').DataTable({
+        pageLength: 100,
+        lengthMenu: [ [50, 100, 250, -1], [50, 100, 250, "Todos"] ],
+        language: {
+            url: "//cdn.datatables.net/plug-ins/1.13.6/i18n/es-ES.json"
+        }
+    });
+    document.getElementById('tabla-container').style.display = 'block';
+}
+
+function mostrarGrafico() {
+    ocultarTodo();
+
+    const conectados = datosFiltrados.filter(d => d.sensor.toLowerCase() === 'connected').length;
+    const desconectados = datosFiltrados.filter(d => d.sensor.toLowerCase() === 'disconnected').length;
+    const sinDato = datosFiltrados.length - conectados - desconectados;
+
+    const ctx = document.getElementById('graficoCircular').getContext('2d');
+    if (grafico) grafico.destroy();
+
+    grafico = new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+            labels: ['Conectados', 'Desconectados', 'Sin Dato'],
+            datasets: [{
+                data: [conectados, desconectados, sinDato],
+                backgroundColor: ['#28a745', '#ffc107', '#6c757d']
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: { position: 'bottom' }
+            },
+            onClick: (event, elements) => {
+                if (elements.length > 0) {
+                    const index = elements[0].index;
+                    const estado = ['connected', 'disconnected', 'otro'][index];
+
+                    const filtrados = datosFiltrados.filter(d => {
+                        if (estado === 'otro') {
+                            return d.sensor.toLowerCase() !== 'connected' && d.sensor.toLowerCase() !== 'disconnected';
+                        }
+                        return d.sensor.toLowerCase() === estado;
+                    });
+
+                    mostrarDetalleFiltrado(filtrados, estado);
+                }
+            }
+        }
+    });
+
+    document.getElementById('grafico-container').style.display = 'block';
+}
+
+function mostrarDetalleFiltrado(data, estado) {
+    let html = `<h3>Detalles de equipos: ${estado}</h3>`;
+    html += '<table id="tablaDetalle" class="display"><thead><tr>';
+    html += '<th>Nombre de Equipo</th><th>IP</th><th>MAC</th><th>Estado Antivirus</th><th>Último Update</th><th>Estado Sensores</th>';
+    html += '</tr></thead><tbody>';
+
+    data.forEach(d => {
+        html += `<tr><td>${d.nombre}</td><td>${d.ip}</td><td>${d.mac}</td><td>${d.estadoAV}</td><td>${d.ultimoUpdate}</td><td>${d.sensor}</td></tr>`;
+    });
+
+    html += '</tbody></table>';
+    document.getElementById('segmento-container').innerHTML = html;
+    document.getElementById('segmento-container').style.display = 'block';
+
+    $('#tablaDetalle').DataTable({
+        pageLength: 50,
+        lengthMenu: [ [50, 100, -1], [50, 100, "Todos"] ],
+        language: {
+            url: "//cdn.datatables.net/plug-ins/1.13.6/i18n/es-ES.json"
+        }
+    });
+}
+
+function mostrarSegmentos() {
+    ocultarTodo();
+
+    const conteoSegmentos = {};
+
+    datosFiltrados.forEach(d => {
+        const ip = d.ip.trim();
+        if (/^\d+\.\d+\.\d+\.\d+$/.test(ip)) {
+            const segmento = ip.split('.').slice(0, 2).join('.') + '.x.x';
+            conteoSegmentos[segmento] = (conteoSegmentos[segmento] || 0) + 1;
+        }
+    });
+
+    const etiquetas = Object.keys(conteoSegmentos);
+    const valores = Object.values(conteoSegmentos);
+    const colores = etiquetas.map(() => '#' + Math.floor(Math.random()*16777215).toString(16));
+
+    const ctx = document.getElementById('graficoCircular').getContext('2d');
+    if (grafico) grafico.destroy();
+
+    grafico = new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+            labels: etiquetas,
+            datasets: [{
+                data: valores,
+                backgroundColor: colores
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: { position: 'bottom' }
+            },
+            onClick: (event, elements) => {
+                if (elements.length > 0) {
+                    const index = elements[0].index;
+                    const segmento = etiquetas[index];
+                    const baseSegmento = segmento.replace('.x.x', '');
+
+                    const filtrados = datosFiltrados.filter(d =>
+                        d.ip.trim().startsWith(baseSegmento)
+                    );
+
+                    mostrarDetalleFiltrado(filtrados, `Segmento: ${segmento}`);
+                }
+            }
+        }
+    });
+
+    document.getElementById('grafico-container').style.display = 'block';
+}
+
+function mostrarGraficoSedes() {
+    ocultarTodo();
+
+    // Diccionario de códigos → sedes
+    const codigosSede = {
+        ARE: "Arenales",
+        BEL: "Belgrano",
+        LOR: "Loria",
+        ESM: "Esmeralda",
+        BER: "Beruti",
+        SFE: "Santa Fe",
+        SOL: "Solar",
+        LAP: "Laprida",
+        CAS: "Castex",
+        PLE: "Parque Leloir",
+        K41: "K41",
+        QUI: "Quilmes",
+        SID: "San Isidro",
+        GUE: "Sanatorio Güemes",
+        P1B: "Pasteur 1 Belgrano",
+        P2C: "Pasteur 2 Congreso",
+        FIN: "SANATORIO FINOCCHIETO",
+        IMC: "IMAC",
+        HCA: "HIDALGO CASEROS",
+        HCM: "HIDALGO CAMPANA",
+        HDT: "Hidalgo Don Torcuato",
+        HLT: "HIDALGO LIRIOS DEL TALAR",
+        HLS: "HIDALGO LOMAS de SAN ISIDRO",
+        HMT: "HIDALGO MARTINEZ",
+        HMS: "HIDALGO MASCHWITZ MALL",
+        HMU: "HIDALGO MUNRO",
+        HPA: "HIDALGO PACHECO",
+        HPU: "HIDALGO POLO UNO",
+        HRE: "HIDALGO REMEROS",
+        HSM: "HIDALGO SAN MIGUEL",
+        HSR: "HIDALGO SANTA RITA",
+        HTG: "HIDALGO TIGRE",
+        HTN: "HIDALGO TORTUGAS NORTE",
+        HVL: "HIDALGO VICENTE LOPEZ",
+        HVA: "HIDALGO VILLA ADELINA",
+        HVB: "HIDALGO VILLA BALLESTER",
+        HPT: "HIDALGO PILAR - CENTRO DE TESTEO",
+        HIT: "HIDALGO ITUZAINGO (SAN ISIDRO)",
+        HP5: "HIDALGO PARALELO 50",
+        HSF: "HIDALGO SAN FERNANDO",
+        HCP: "Hidalgo Hospital Central de Pilar",
+        HHF: "Hidalgo Pilar Hospital Falcon",
+        HBV: "Hidalgo Bella Vista",
+        HSA: "Hidalgo Hospital Sanguinetti",
+        HDD: "Hidalgo Hospital Derqui",
+        CVV: "Hidalgo CAP Villa Verde",
+        CMA: "Hidalgo CAP Manzanares",
+        CZL: "Hidalgo CAP Zelaya",
+        CMT: "Hidalgo CAP Monterrey",
+        CSA: "Hidalgo CAP San Alejo",
+        CVR: "Hidalgo CAP Villa Rosa",
+        CAL: "Hidalgo CAP Alberti",
+        CVA: "Hidalgo CAP Villa Astolfi",
+        SMU: "Stambulian Microcentro",
+        SBE: "Stambulian Belgrano",
+        SFR: "Stambulian French",
+        SVU: "Stambulian Villa Urquiza",
+        SME: "Stambulian Melo",
+        SAL: "Laboratorio Alimentos",
+        SVC: "Stambulian Villa Crespo",
+        SFL: "Stambulian Flores"
+    };
+
+    const conteoSedes = {};
+
+    datosFiltrados.forEach(d => {
+        const nombre = d.nombre.trim().toUpperCase();
+
+        // Extrae últimos 3 caracteres como código, o 4 si querés más precisión
+        const codigo = nombre.slice(-3);  // también se puede usar -4
+
+        const sede = codigosSede[codigo] || "OTROS";
+
+        conteoSedes[sede] = (conteoSedes[sede] || 0) + 1;
+    });
+
+    const etiquetas = Object.keys(conteoSedes);
+    const valores = Object.values(conteoSedes);
+    const colores = etiquetas.map(() => '#' + Math.floor(Math.random() * 16777215).toString(16));
+
+    const ctx = document.getElementById('graficoCircular').getContext('2d');
+    if (grafico) grafico.destroy();
+
+    grafico = new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+            labels: etiquetas,
+            datasets: [{
+                data: valores,
+                backgroundColor: colores
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: { position: 'bottom' }
+            },
+            onClick: (event, elements) => {
+                if (elements.length > 0) {
+                    const index = elements[0].index;
+                    const sedeSeleccionada = etiquetas[index];
+
+                    const filtrados = datosFiltrados.filter(d => {
+                        const nombre = d.nombre.trim().toUpperCase();
+                        const codigo = nombre.slice(-3);
+                        const sede = codigosSede[codigo] || "OTROS";
+                        return sede === sedeSeleccionada;
+                    });
+
+                    mostrarDetalleFiltrado(filtrados, `Sede: ${sedeSeleccionada}`);
+                }
+            }
+        }
+    });
+
+    document.getElementById('grafico-container').style.display = 'block';
+}
+
+function ocultarTodo() {
+    document.getElementById('tabla-container').style.display = 'none';
+    document.getElementById('grafico-container').style.display = 'none';
+    document.getElementById('segmento-container').style.display = 'none';
+    document.getElementById('detalle-segmento').innerHTML = '';
+}
+
+document.getElementById('btnLista').addEventListener('click', mostrarLista);
+document.getElementById('btnGrafico').addEventListener('click', mostrarGrafico);
+document.getElementById('btnSegmento').addEventListener('click', mostrarSegmentos);
+document.getElementById('btnSede').addEventListener('click', mostrarGraficoSedes);
+document.getElementById('toggleSidebar').addEventListener('click', function() {
+  const sidebar = document.getElementById('sidebar');
+  const main = document.getElementById('main');
+  sidebar.classList.toggle('colapsado');
+  main.classList.toggle('expandido');
+});
+
+let datosDHCP = [];
+
+function leerDHCP(event) {
+  const archivo = event.target.files[0];
+  if (!archivo) return;
+
+  const lector = new FileReader();
+  lector.onload = function(e) {
+    const data = new Uint8Array(e.target.result);
+    const workbook = XLSX.read(data, { type: 'array' });
+    const sheet = workbook.Sheets[workbook.SheetNames[0]];
+    const json = XLSX.utils.sheet_to_json(sheet, { header: 1 });
+
+    datosDHCP = [];
+
+    for (let i = 1; i < json.length; i++) {
+      const fila = json[i];
+      if (!fila[1] || !fila[2] || !fila[12]) continue;
+
+      datosDHCP.push({
+        ip: fila[1].toString().trim(),
+        mac: fila[2].toString().trim().toUpperCase(),
+        hostname: fila[12].toString().trim()
+      });
+    }
+
+    alert(`✅ Se cargaron ${datosDHCP.length} registros DHCP.`);
+  };
+
+  lector.readAsArrayBuffer(archivo);
+}
+
+function mostrarDHCP() {
+  if (datosDHCP.length === 0) {
+    alert("❌ No hay datos de DHCP cargados.");
+    return;
+  }
+
+  ocultarTodo();
+
+  let html = "<h2>📡 Leases DHCP Cargados</h2><table><thead><tr><th>#</th><th>IP</th><th>MAC</th><th>Hostname</th></tr></thead><tbody>";
+  datosDHCP.forEach((d, i) => {
+    html += `<tr><td>${i + 1}</td><td>${d.ip}</td><td>${d.mac}</td><td>${d.hostname}</td></tr>`;
+  });
+  html += "</tbody></table>";
+
+  const contenedor = document.getElementById("contenido");
+  contenedor.innerHTML = html;
+  contenedor.style.display = "block";
+  $('#contenido table').DataTable({
+    responsive: true,
+    scrollX: true,
+    pageLength: 50,
+    lengthMenu: [ [50, 100, -1], [50, 100, "Todos"] ],
+    language: {
+      url: "//cdn.datatables.net/plug-ins/1.13.6/i18n/es-ES.json"
+    }
+  });
+}
+function compararDHCPconInventarioAvanzado() {
+  try {
+    if (!Array.isArray(datosDHCP) || datosDHCP.length === 0) {
+      alert("❌ No hay datos DHCP cargados.");
+      return;
+    }
+
+    if (!Array.isArray(datosFiltrados) || datosFiltrados.length === 0) {
+      alert("❌ No hay inventario CSV cargado.");
+      return;
+    }
+
+    const dhcpUnicos = {};
+    datosDHCP.forEach(d => {
+      const mac = d.mac?.trim().toUpperCase();
+      if (mac && mac !== "<NONE>" && mac.length >= 10 && !dhcpUnicos[mac]) {
+        dhcpUnicos[mac] = d;
+      }
+    });
+
+    const dhcpFiltrado = Object.values(dhcpUnicos);
+    if (dhcpFiltrado.length === 0) {
+      alert("⚠️ No se encontraron MACs válidas en el archivo DHCP.");
+      return;
+    }
+
+    const conAntivirus = [];
+    const sinAntivirus = [];
+    const otros = [];
+
+    dhcpFiltrado.forEach(dhcp => {
+      const mac = dhcp.mac?.trim().toUpperCase();
+      if (!mac || mac.length < 10) {
+        otros.push(dhcp);
+        return;
+      }
+
+      const match = datosFiltrados.find(csv =>
+        csv.mac.trim().toUpperCase() === mac
+      );
+
+      if (match) {
+        conAntivirus.push({
+          ...dhcp,
+          nombreCSV: match.nombre,
+          ipCSV: match.ip
+        });
+      } else {
+        sinAntivirus.push(dhcp);
+      }
+    });
+
+    let html = "<h2>🧪 Comparativa DHCP vs Inventario Antivirus</h2>";
+
+    html += `<h3>🛡️ Equipos con Antivirus (${conAntivirus.length})</h3>`;
+    html += generarTablaComparador(conAntivirus, "🛡️");
+
+    html += `<h3>☢️ Equipos sin Antivirus (${sinAntivirus.length})</h3>`;
+    html += generarTablaComparador(sinAntivirus, "☢️");
+
+    html += `<h3>❓ Otros registros ignorados (${otros.length})</h3>`;
+    html += generarTablaComparador(otros, "❓");
+
+    const contenedor = document.getElementById("contenido");
+    contenedor.innerHTML = html;
+    contenedor.style.display = "block";
+
+    // Inicializa cada tabla si existe
+    $('#contenido table').each(function() {
+      $(this).DataTable({
+        pageLength: 50,
+        lengthMenu: [ [50, 100, -1], [50, 100, "Todos"] ],
+        language: {
+          url: "//cdn.datatables.net/plug-ins/1.13.6/i18n/es-ES.json"
+        }
+      });
+    });
+
+  } catch (err) {
+    console.error("❌ Error al comparar DHCP con Inventario:", err);
+    alert("Ocurrió un error. Revisá la consola para más detalles.");
+  }
+}
+function generarTablaComparador(arr, icono) {
+  if (arr.length === 0) return "<p>Sin registros.</p>";
+
+  let html = "<table><thead><tr><th>#</th><th>Icono</th><th>MAC</th><th>IP DHCP</th><th>Hostname</th><th>Nombre CSV</th><th>IP CSV</th></tr></thead><tbody>";
+  arr.forEach((item, i) => {
+    html += `<tr>
+      <td>${i + 1}</td>
+      <td>${icono}</td>
+      <td>${item.mac || ""}</td>
+      <td>${item.ip || ""}</td>
+      <td>${item.hostname || ""}</td>
+      <td>${item.nombreCSV || "-"}</td>
+      <td>${item.ipCSV || "-"}</td>
+    </tr>`;
+  });
+  html += "</tbody></table>";
+  return html;
+}
+
+function compararMACconInventario() {
+  if (!Array.isArray(macConvertidas) || macConvertidas.length === 0) {
+    alert("❌ No hay MACs convertidas. Subí un archivo primero.");
+    return;
+  }
+
+  if (!Array.isArray(datosFiltrados) || datosFiltrados.length === 0) {
+    alert("❌ No hay archivo CSV de inventario cargado.");
+    return;
+  }
+
+  const conAV = [];
+  const sinAV = [];
+  const invalidas = [];
+
+  macConvertidas.forEach(item => {
+    const mac = item.mac?.toUpperCase();
+
+    if (!mac || mac.length < 12) {
+      invalidas.push(item);
+      return;
+    }
+
+    const match = datosFiltrados.find(d =>
+      d.mac.trim().toUpperCase() === mac
+    );
+
+    if (match) {
+      conAV.push({
+        ...item,
+        nombre: match.nombre,
+        ip: match.ip
+      });
+    } else {
+      sinAV.push(item);
+    }
+  });
+
+  let html = "<h2>🧪 Comparación de MACs contra Inventario Antivirus</h2>";
+
+  html += `<h3>🛡️ Equipos detectados en inventario (${conAV.length})</h3>`;
+  html += generarTablaMACDiagnostico(conAV, "🛡️");
+
+  html += `<h3>☢️ MACs sin Antivirus (${sinAV.length})</h3>`;
+  html += generarTablaMACDiagnostico(sinAV, "☢️");
+
+  html += `<h3>❓ MACs inválidas o sin datos (${invalidas.length})</h3>`;
+  html += generarTablaMACDiagnostico(invalidas, "❓");
+
+  const contenedor = document.getElementById("contenido");
+  contenedor.innerHTML = html;
+  contenedor.style.display = "block";
+
+  // Activar DataTables en todas las tablas
+  $('#contenido table').each(function() {
+    $(this).DataTable({
+      pageLength: 50,
+      lengthMenu: [ [50, 100, -1], [50, 100, "Todos"] ],
+      language: {
+        url: "https://cdn.datatables.net/plug-ins/1.13.6/i18n/es-ES.json"
+      }
+    });
+  });
+}
+
+function generarTablaMACDiagnostico(arr, icono) {
+  if (arr.length === 0) return "<p>Sin registros en esta categoría.</p>";
+
+  let html = "<table><thead><tr><th>#</th><th>Icono</th><th>MAC</th><th>Puerto</th><th>Nombre de Equipo</th><th>IP</th></tr></thead><tbody>";
+  arr.forEach((item, i) => {
+    html += `<tr>
+      <td>${i + 1}</td>
+      <td>${icono}</td>
+      <td>${item.mac || "-"}</td>
+      <td>${item.puerto || "-"}</td>
+      <td>${item.nombre || "-"}</td>
+      <td>${item.ip || "-"}</td>
+    </tr>`;
+  });
+  html += "</tbody></table>";
+  return html;
+}
+
+
+  </script>
+
+  <!-- Aquí continúa TODO el script del Dashboard original (ya incluido en tu mensaje) -->
+</body>
+</html>
